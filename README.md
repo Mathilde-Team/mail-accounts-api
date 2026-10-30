@@ -1,9 +1,22 @@
 # Mail Accounts API
 
 API REST pour le gestionnaire `manage_accounts.py` de docker-mailserver.
-Le script CLI d'origine est conserve sans modification ; l'API reutilise ses
-fonctions de hash SHA512 et de generation de mots de passe. Aucun compte reel,
-hash, certificat ou identifiant n'est inclus dans ce depot.
+L'API reutilise les fonctions de hash SHA512 et de generation de mots de passe
+du CLI. Aucun compte reel, hash, certificat ou identifiant n'est inclus dans
+ce depot.
+
+## Socle qualite
+
+Depot conforme au [socle qualite Mathilde-Team](https://github.com/Mathilde-Team/.github/blob/main/SOCLE.md) :
+licence GPL-3.0-or-later, branches `main` (livraison) et `dev` (integration),
+protections versionnees dans `.github/branch-protection/`, journalisation
+loguru (sections 7 et 8 du socle), couverture de tests >= 95 %.
+
+```sh
+uv sync
+make test    # pytest + couverture (seuil lu dans pyproject.toml)
+make lint    # ruff check + ruff format --check
+```
 
 ## Installation
 

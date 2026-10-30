@@ -1,0 +1,62 @@
+# Socle qualité Mathilde-Team (SOCLE.md) — projet Python existant :
+# garder les sections [tool.coverage.*], le seuil de couverture est déclaré
+# ici et nulle part ailleurs (SOCLE.md §4).
+[project]
+name = "mail-accounts-api"
+version = "1.0.0"
+# Licence de l'équipe (SOCLE.md §1).
+license = "GPL-3.0-or-later"
+description = "API FastAPI de gestion des comptes mail docker-mailserver"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.34,<1",
+    "python-dotenv>=1.0,<2",
+    # Journalisation (SOCLE §8) : loguru pour tout le Python de l'équipe.
+    "loguru>=0.7",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28,<1",
+    "pytest>=8,<10",
+    "pytest-cov>=6.0",
+    "ruff>=0.13",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "scripts"]
+addopts = "-ra"
+
+[tool.coverage.run]
+# Couverture des branches obligatoire (SOCLE.md §4).
+branch = true
+# Code mesuré : les modules du dépôt (api, storage, manage_accounts, run).
+source = ["api", "storage", "manage_accounts", "run"]
+
+[tool.coverage.report]
+# Seuil bloquant de l'équipe (décision du 21/10/2026, Mathilde-Team/.github#9).
+# Dépôt existant sous 95 % : palier fixé à la mesure du jour (issue #6),
+# à relever à chaque PR de tests jusqu'à 95.
+fail_under = 95
+show_missing = true
+skip_covered = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+# Les asserts sont l'outil normal des tests ; lancer l'audit du socle par un
+# chemin partiel est sans risque dans les tests.
+"tests/*" = ["S101", "S607"]
+# Scripts du socle repris verbatim de modele-depot (SOCLE §10, cohérence) :
+# ils appellent git via un chemin partiel et ouvrent des URLs contrôlées.
+"scripts/*" = ["S607", "S310"]
