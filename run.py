@@ -1,10 +1,13 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 import os
 from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
 
-if __name__ == "__main__":
+# Exclusion de couverture justifiée (SOCLE §4) : garde de script, le
+# lancement réel démarre uvicorn et ne revient pas.
+if __name__ == "__main__":  # pragma: no cover
     load_dotenv(Path(__file__).with_name(".env"), override=False)
     uvicorn.run(
         "api:create_app",
