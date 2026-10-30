@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.cf
+*.lock
+*.csv
+*.pem
+*.key
+*.p12

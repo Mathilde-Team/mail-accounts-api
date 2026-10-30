@@ -1,0 +1,37 @@
+[Unit]
+Description=Mail accounts management API
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/app/12-mail/config
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/mail-accounts-api
+EnvironmentFile=/etc/mail-accounts-api/.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/mail-accounts-api/.venv/bin/python /opt/mail-accounts-api/run.py
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectKernelLogs=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=CAP_CHOWN CAP_FOWNER CAP_DAC_OVERRIDE
+ReadWritePaths=/app/12-mail/config
+
+[Install]
+WantedBy=multi-user.target
