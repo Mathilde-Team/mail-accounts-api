@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 # -*- coding: utf-8 -*-
-"""
-Gestionnaire de comptes mail pour docker-mailserver
-Permet d'ajouter, modifier, supprimer et lister les comptes mail
+"""Gestionnaire de comptes mail pour docker-mailserver.
+
+Permet d'ajouter, modifier, supprimer et lister les comptes mail. Le mot de
+passe généré est affiché une seule fois à la création (sortie standard,
+comme la réponse de l'API) : il n'apparaît jamais dans les messages du
+journal (SOCLE §8, règle 6).
 """
 
 import hashlib
-import os
-import sys
-import argparse
 import secrets
+import sys
 from pathlib import Path
-from typing import List, Dict, Tuple
+
+from loguru import logger
 
 ACCOUNTS_FILE = "/app/12-mail/config/postfix-accounts.cf"
-DOCKER_CMD = "docker"
-SWARM_MODE = True
 
 
 def sha512_hash(password: str) -> str:
@@ -28,13 +29,16 @@ def generate_password(length: int = 16) -> str:
     return secrets.token_urlsafe(length)
 
 
-def parse_accounts_file() -> List[Dict[str, str]]:
+def parse_accounts_file() -> list[dict[str, str]]:
     """Parse le fichier des comptes"""
+    logger.debug("parse_accounts_file : entrée")
     accounts = []
-    if not os.path.exists(ACCOUNTS_FILE):
+    path = Path(ACCOUNTS_FILE)
+    if not path.exists():
+        logger.debug("parse_accounts_file : sortie (fichier absent, 0 compte)")
         return accounts
 
-    with open(ACCOUNTS_FILE, "r") as f:
+    with path.open("r") as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith("#"):
@@ -42,23 +46,27 @@ def parse_accounts_file() -> List[Dict[str, str]]:
             parts = line.split("|")
             if len(parts) >= 3:
                 accounts.append({"email": parts[0], "hash": parts[1], "folder": parts[2]})
+    logger.debug("parse_accounts_file : sortie ({} comptes)", len(accounts))
     return accounts
 
 
-def write_accounts_file(accounts: List[Dict[str, str]]) -> None:
+def write_accounts_file(accounts: list[dict[str, str]]) -> None:
     """Écrit les comptes dans le fichier"""
-    os.makedirs(os.path.dirname(ACCOUNTS_FILE), exist_ok=True)
-    with open(ACCOUNTS_FILE, "w") as f:
+    logger.debug("write_accounts_file : entrée ({} comptes)", len(accounts))
+    path = Path(ACCOUNTS_FILE)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as f:
         for account in accounts:
             f.write(f"{account['email']}|{account['hash']}|{account['folder']}\n")
-    print(f"✅ Fichier des comptes mis à jour: {ACCOUNTS_FILE}")
+    logger.info("fichier des comptes mis à jour : {}", ACCOUNTS_FILE)
 
 
 def list_accounts() -> None:
     """Liste tous les comptes mail"""
+    logger.debug("list_accounts : entrée")
     accounts = parse_accounts_file()
     if not accounts:
-        print("❌ Aucun compte trouvé")
+        logger.warning("aucun compte trouvé")
         return
 
     print("\n📧 COMPTES MAIL")
@@ -67,20 +75,22 @@ def list_accounts() -> None:
         print(f"{i}. {acc['email']:<35} Dossier: {acc['folder']}")
     print("=" * 70)
     print(f"Total: {len(accounts)} compte(s)")
+    logger.debug("list_accounts : sortie ({} comptes affichés)", len(accounts))
 
 
-def add_account(email: str, password: str = None, auto_generate: bool = False) -> None:
+def add_account(email: str, password: str | None = None, auto_generate: bool = False) -> None:
     """Ajoute un nouveau compte mail"""
+    logger.debug("add_account : entrée (email={}, mot de passe fourni={})", email, password is not None)
     accounts = parse_accounts_file()
 
     # Vérifier que le compte n'existe pas
     if any(acc["email"] == email for acc in accounts):
-        print(f"❌ Le compte {email} existe déjà!")
+        logger.error("le compte {} existe déjà", email)
         return
 
     # Valider email
     if "@" not in email or "." not in email:
-        print(f"❌ Email invalide: {email}")
+        logger.error("email invalide : {}", email)
         return
 
     # Générer le mot de passe si nécessaire
@@ -97,59 +107,66 @@ def add_account(email: str, password: str = None, auto_generate: bool = False) -
 
     write_accounts_file(accounts)
 
-    print(f"\n✅ Compte créé avec succès!")
-    print(f"   Email: {email}")
+    logger.info("compte créé : {} (dossier {})", email, folder)
+    # Sortie standard (et non journal) : le mot de passe n'est affiché qu'ici,
+    # une seule fois, comme la réponse de l'API à la création.
     print(f"   Mot de passe: {password}")
     print(f"   Dossier: /var/mail/dmathilde.fr/{folder}/")
 
     if auto_generate:
-        print("\n⚠️  Mot de passe généré automatiquement - conservez-le de manière sécurisée!")
+        logger.warning("mot de passe généré automatiquement — conservez-le de manière sécurisée")
+    logger.debug("add_account : sortie")
 
 
 def modify_account(email: str, new_password: str) -> None:
     """Modifie le mot de passe d'un compte"""
+    logger.debug("modify_account : entrée (email={})", email)
     accounts = parse_accounts_file()
 
     # Chercher le compte
     account = next((acc for acc in accounts if acc["email"] == email), None)
     if not account:
-        print(f"❌ Compte {email} introuvable!")
+        logger.error("compte {} introuvable", email)
         return
 
     # Mettre à jour le mot de passe
     account["hash"] = sha512_hash(new_password)
     write_accounts_file(accounts)
 
-    print(f"✅ Mot de passe mis à jour pour {email}")
+    logger.info("mot de passe mis à jour pour {}", email)
+    # Sortie standard : affichage unique du mot de passe, comme la création.
     print(f"   Nouveau mot de passe: {new_password}")
+    logger.debug("modify_account : sortie")
 
 
 def delete_account(email: str, confirm: bool = False) -> None:
     """Supprime un compte mail"""
+    logger.debug("delete_account : entrée (email={}, confirm={})", email, confirm)
     accounts = parse_accounts_file()
 
     # Chercher le compte
     account = next((acc for acc in accounts if acc["email"] == email), None)
     if not account:
-        print(f"❌ Compte {email} introuvable!")
+        logger.error("compte {} introuvable", email)
         return
 
     # Demander confirmation
     if not confirm:
         response = input(f"\n⚠️  Êtes-vous sûr de vouloir supprimer {email}? (oui/non): ").strip().lower()
         if response not in ["oui", "o", "yes", "y"]:
-            print("❌ Opération annulée")
+            logger.info("opération annulée par l'utilisateur")
             return
 
     # Supprimer le compte
     accounts = [acc for acc in accounts if acc["email"] != email]
     write_accounts_file(accounts)
 
-    print(f"✅ Compte {email} supprimé")
+    logger.info("compte {} supprimé", email)
 
 
 def show_help() -> None:
     """Affiche l'aide"""
+    logger.debug("show_help : entrée")
     print("""
 ╔════════════════════════════════════════════════════════════════════════╗
 ║         GESTIONNAIRE DE COMPTES MAIL - docker-mailserver               ║
@@ -161,43 +178,46 @@ UTILISATION:
 COMMANDES:
 
   list                      Lister tous les comptes mail
-  
+
   add EMAIL [PASSWORD]      Ajouter un nouveau compte
                             Si PASSWORD omis → génération automatique
-    
+
   modify EMAIL PASSWORD     Modifier le mot de passe d'un compte
-  
+
   delete EMAIL              Supprimer un compte (demande confirmation)
-  
+
   help                      Afficher cette aide
 
 EXEMPLES:
 
   # Lister les comptes
   python3 manage_accounts.py list
-  
+
   # Ajouter un compte avec mot de passe auto-généré
   python3 manage_accounts.py add user@dmathilde.fr
-  
+
   # Ajouter un compte avec mot de passe spécifique
   python3 manage_accounts.py add user@dmathilde.fr "MonMotDePasse123!"
-  
+
   # Modifier le mot de passe
   python3 manage_accounts.py modify user@dmathilde.fr "NouveauMotDePasse456!"
-  
+
   # Supprimer un compte
   python3 manage_accounts.py delete user@dmathilde.fr
 
 APRÈS MODIFICATION:
-  
+
   Redéployer le service mail:
     docker stack deploy -c docker-compose.yml 12
 """)
+    logger.debug("show_help : sortie")
 
 
-def main():
+def main() -> None:
+    logger.debug("main : entrée (argv={})", sys.argv[1:])
     if len(sys.argv) < 2:
         show_help()
+        logger.debug("main : sortie (aucune commande, aide affichée)")
         return
 
     command = sys.argv[1].lower()
@@ -210,7 +230,7 @@ def main():
 
     elif command == "add":
         if len(sys.argv) < 3:
-            print("❌ Usage: python3 manage_accounts.py add EMAIL [PASSWORD]")
+            logger.error("usage : python3 manage_accounts.py add EMAIL [PASSWORD]")
             sys.exit(1)
         email = sys.argv[2]
         password = sys.argv[3] if len(sys.argv) > 3 else None
@@ -218,7 +238,7 @@ def main():
 
     elif command == "adds":
         if len(sys.argv) < 6:
-            print("❌ Usage: python3 manage_accounts.py adds EMAIL [PASSWORD] START END")
+            logger.error("usage : python3 manage_accounts.py adds EMAIL [PASSWORD] START END")
             sys.exit(1)
         email, domaine = sys.argv[2].split("@")
         password = sys.argv[3] if len(sys.argv) > 3 else None
@@ -227,7 +247,7 @@ def main():
 
     elif command == "modify":
         if len(sys.argv) < 4:
-            print("❌ Usage: python3 manage_accounts.py modify EMAIL PASSWORD")
+            logger.error("usage : python3 manage_accounts.py modify EMAIL PASSWORD")
             sys.exit(1)
         email = sys.argv[2]
         password = sys.argv[3]
@@ -235,15 +255,17 @@ def main():
 
     elif command == "delete":
         if len(sys.argv) < 3:
-            print("❌ Usage: python3 manage_accounts.py delete EMAIL")
+            logger.error("usage : python3 manage_accounts.py delete EMAIL")
             sys.exit(1)
         email = sys.argv[2]
         delete_account(email)
 
     else:
-        print(f"❌ Commande inconnue: {command}")
-        print("Tapez 'python3 manage_accounts.py help' pour l'aide")
+        logger.error("commande inconnue : {}", command)
+        logger.info("tapez 'python3 manage_accounts.py help' pour l'aide")
         sys.exit(1)
+
+    logger.debug("main : sortie (commande={})", command)
 
 
 if __name__ == "__main__":

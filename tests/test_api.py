@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
@@ -33,15 +34,18 @@ def test_key_required(accounts_file):
             create_app(accounts_file, key)
 
 
-@pytest.mark.parametrize("method,path", [
-    ("get", "/accounts"),
-    ("get", "/accounts/old@example.org"),
-    ("post", "/accounts"),
-    ("post", "/accounts/batch"),
-    ("post", "/accounts/numbered"),
-    ("patch", "/accounts/old@example.org"),
-    ("delete", "/accounts/old@example.org"),
-])
+@pytest.mark.parametrize(
+    "method,path",
+    [
+        ("get", "/accounts"),
+        ("get", "/accounts/old@example.org"),
+        ("post", "/accounts"),
+        ("post", "/accounts/batch"),
+        ("post", "/accounts/numbered"),
+        ("patch", "/accounts/old@example.org"),
+        ("delete", "/accounts/old@example.org"),
+    ],
+)
 def test_authentication_required(client, method, path):
     for headers in ({}, {"Authorization": "Bearer incorrect"}, {"Authorization": "Basic abc"}):
         response = client.request(method, path, headers=headers)
@@ -77,10 +81,13 @@ def test_create_modify_delete(client, accounts_file):
     assert len(password) >= 16
     assert f"new@example.org|{sha512_hash(password)}|new" in accounts_file.read_text()
     assert client.get("/accounts/new@example.org", headers=HEADERS).json() == {
-        "email": "new@example.org", "folder": "new",
+        "email": "new@example.org",
+        "folder": "new",
     }
     response = client.patch(
-        "/accounts/new@example.org", headers=HEADERS, json={"password": "replacement"},
+        "/accounts/new@example.org",
+        headers=HEADERS,
+        json={"password": "replacement"},
     )
     assert response.status_code == 200
     assert "replacement" not in response.text
@@ -96,7 +103,9 @@ def test_create_modify_delete(client, accounts_file):
 
 def test_supplied_password_never_echoed(client):
     response = client.post(
-        "/accounts", headers=HEADERS, json={"email": "new@example.org", "password": "private-value"},
+        "/accounts",
+        headers=HEADERS,
+        json={"email": "new@example.org", "password": "private-value"},
     )
     assert response.status_code == 201
     assert response.json() == {"email": "new@example.org", "folder": "new"}
@@ -111,15 +120,18 @@ def test_conflict_and_missing(client, accounts_file):
     assert accounts_file.read_bytes() == before
 
 
-@pytest.mark.parametrize("body", [
-    {"email": "bad\n@example.org"},
-    {"email": "../../user@example.org"},
-    {"email": "user|injected@example.org"},
-    {"email": "user@example.org", "password": ""},
-    {"email": "user@example.org", "password": 123},
-    {"email": "user@example.org", "unexpected": "secret-sentinel"},
-    {"email": "user@example.org", "password": "secret-sentinel" * 100},
-])
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"email": "bad\n@example.org"},
+        {"email": "../../user@example.org"},
+        {"email": "user|injected@example.org"},
+        {"email": "user@example.org", "password": ""},
+        {"email": "user@example.org", "password": 123},
+        {"email": "user@example.org", "unexpected": "secret-sentinel"},
+        {"email": "user@example.org", "password": "secret-sentinel" * 100},
+    ],
+)
 def test_invalid_input_no_secret_echo(client, accounts_file, body):
     before = accounts_file.read_bytes()
     response = client.post("/accounts", headers=HEADERS, json=body)
@@ -131,18 +143,28 @@ def test_invalid_input_no_secret_echo(client, accounts_file, body):
 def test_batch_atomic_and_bounded(client, accounts_file):
     before = accounts_file.read_bytes()
     for names in (["new@example.org", "old@example.org"], ["new@example.org"] * 2):
-        response = client.post("/accounts/batch", headers=HEADERS, json={
-            "accounts": [{"email": name} for name in names],
-        })
+        response = client.post(
+            "/accounts/batch",
+            headers=HEADERS,
+            json={
+                "accounts": [{"email": name} for name in names],
+            },
+        )
         assert response.status_code == 409
         assert accounts_file.read_bytes() == before
     for accounts in ([], [{"email": f"test{i}@example.org"} for i in range(101)]):
         assert client.post("/accounts/batch", headers=HEADERS, json={"accounts": accounts}).status_code == 422
         assert accounts_file.read_bytes() == before
-    response = client.post("/accounts/batch", headers=HEADERS, json={"accounts": [
-        {"email": "one@example.org", "password": "one"},
-        {"email": "two@example.org"},
-    ]})
+    response = client.post(
+        "/accounts/batch",
+        headers=HEADERS,
+        json={
+            "accounts": [
+                {"email": "one@example.org", "password": "one"},
+                {"email": "two@example.org"},
+            ]
+        },
+    )
     assert response.status_code == 201
     assert len(response.json()) == 2
     assert "password" not in response.json()[0]
@@ -189,21 +211,36 @@ def test_concurrent_writes(accounts_file):
 
 
 def test_numbered_matches_cli_range(client, accounts_file):
-    response = client.post("/accounts/numbered", headers=HEADERS, json={
-        "email": "user@example.org", "password": "shared-password", "start": 2, "end": 5,
-    })
+    response = client.post(
+        "/accounts/numbered",
+        headers=HEADERS,
+        json={
+            "email": "user@example.org",
+            "password": "shared-password",
+            "start": 2,
+            "end": 5,
+        },
+    )
     assert response.status_code == 201
     assert [account["email"] for account in response.json()] == [
-        "user2@example.org", "user3@example.org", "user4@example.org",
+        "user2@example.org",
+        "user3@example.org",
+        "user4@example.org",
     ]
     assert all("password" not in account for account in response.json())
     assert accounts_file.read_text().count(sha512_hash("shared-password")) == 3
 
 
 def test_numbered_generated_passwords_distinct(client):
-    response = client.post("/accounts/numbered", headers=HEADERS, json={
-        "email": "generated@example.org", "start": 0, "end": 3,
-    })
+    response = client.post(
+        "/accounts/numbered",
+        headers=HEADERS,
+        json={
+            "email": "generated@example.org",
+            "start": 0,
+            "end": 3,
+        },
+    )
     assert response.status_code == 201
     assert len({account["password"] for account in response.json()}) == 3
 
@@ -211,9 +248,15 @@ def test_numbered_generated_passwords_distinct(client):
 @pytest.mark.parametrize("start,end", [(2, 2), (3, 2), (0, 101), ("1", 3), (True, 3)])
 def test_numbered_invalid_range(client, accounts_file, start, end):
     before = accounts_file.read_bytes()
-    response = client.post("/accounts/numbered", headers=HEADERS, json={
-        "email": "user@example.org", "start": start, "end": end,
-    })
+    response = client.post(
+        "/accounts/numbered",
+        headers=HEADERS,
+        json={
+            "email": "user@example.org",
+            "start": start,
+            "end": end,
+        },
+    )
     assert response.status_code == 422
     assert accounts_file.read_bytes() == before
 
@@ -221,9 +264,15 @@ def test_numbered_invalid_range(client, accounts_file, start, end):
 def test_numbered_conflict_rolls_back(client, accounts_file):
     assert client.post("/accounts", headers=HEADERS, json={"email": "user2@example.org"}).status_code == 201
     before = accounts_file.read_bytes()
-    response = client.post("/accounts/numbered", headers=HEADERS, json={
-        "email": "user@example.org", "start": 1, "end": 4,
-    })
+    response = client.post(
+        "/accounts/numbered",
+        headers=HEADERS,
+        json={
+            "email": "user@example.org",
+            "start": 1,
+            "end": 4,
+        },
+    )
     assert response.status_code == 409
     assert accounts_file.read_bytes() == before
 
