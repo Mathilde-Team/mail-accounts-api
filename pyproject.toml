@@ -3,7 +3,7 @@
 # ici et nulle part ailleurs (SOCLE.md §4).
 [project]
 name = "mail-accounts-api"
-version = "1.0.0"
+version = "1.2.0"
 # Licence de l'équipe (SOCLE.md §1).
 license = "GPL-3.0-or-later"
 description = "API FastAPI de gestion des comptes mail docker-mailserver"

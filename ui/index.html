@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mail Accounts API — interface</title>
+  <link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+  <header>
+    <h1>Comptes mail</h1>
+    <div id="etat">
+      <span id="pastille" class="pastille inconnue"></span>
+      <span id="etat-texte">état inconnu</span>
+    </div>
+    <form id="form-cle">
+      <input type="password" id="cle" placeholder="Clé d'API" autocomplete="off" aria-label="Clé d'API">
+      <button type="submit" id="bouton-cle">Utiliser</button>
+      <button type="button" id="bouton-oublier" hidden>Oublier la clé</button>
+    </form>
+  </header>
+
+  <main id="contenu" hidden>
+    <section id="message" role="status" aria-live="polite"></section>
+
+    <section>
+      <h2>Comptes <span id="total"></span></h2>
+      <p><input type="search" id="filtre" placeholder="Filtrer par adresse ou dossier"></p>
+      <table>
+        <thead>
+          <tr><th>Adresse</th><th>Dossier</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="corps-tableau"></tbody>
+      </table>
+      <p class="aide">Le mot de passe modifié ou généré n'est affiché qu'une seule fois.</p>
+    </section>
+
+    <section>
+      <h2>Créer un compte</h2>
+      <form id="form-creation">
+        <p>
+          <label for="email">Adresse</label>
+          <input type="email" id="email" required placeholder="user@example.org">
+        </p>
+        <p>
+          <label for="mot-de-passe">Mot de passe <small>(vide : généré et affiché une fois)</small></label>
+          <input type="text" id="mot-de-passe" autocomplete="off">
+        </p>
+        <button type="submit">Créer</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Créer un lot numéroté</h2>
+      <form id="form-numerote">
+        <p>
+          <label for="base">Adresse de base <small>(suffixe numérique ajouté)</small></label>
+          <input type="email" id="base" required placeholder="user@example.org">
+        </p>
+        <p>
+          <label for="debut">Premier numéro (inclus)</label>
+          <input type="number" id="debut" min="1" value="1" required>
+          <label for="fin">Dernier numéro (exclu)</label>
+          <input type="number" id="fin" min="2" value="4" required>
+        </p>
+        <p class="aide">1 à 100 comptes par lot, création atomique. Sans mot de passe, chacun reçoit le sien.</p>
+        <button type="submit">Créer le lot</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Créer un lot libre</h2>
+      <form id="form-lot">
+        <p>
+          <label for="emails">Adresses, une par ligne (1 à 100)</label>
+          <textarea id="emails" rows="5" placeholder="alice@example.org&#10;bob@example.org"></textarea>
+        </p>
+        <button type="submit">Créer le lot</button>
+      </form>
+    </section>
+  </main>
+
+  <noscript>Cette interface est entièrement dynamique : JavaScript est requis.</noscript>
+  <script src="/ui/app.js"></script>
+</body>
+</html>
