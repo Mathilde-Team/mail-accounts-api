@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Exemple de déploiement Docker Compose (issue #10). Copier, adapter puis
+# renseigner MAIL_API_KEY hors du fichier versionné :
+#   MAIL_API_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')" docker compose up -d
+#
+# Le répertoire des comptes docker-mailserver est monté en entier : les
+# écritures sont atomiques (fichier temporaire + os.replace) et créent un
+# fichier de verrou à côté du fichier des comptes, le répertoire doit donc
+# être accessible en écriture à l'utilisateur du conteneur (uid 9000).
+
+services:
+  mail-accounts-api:
+    build: ..
+    image: mail-accounts-api:local
+    restart: unless-stopped
+    environment:
+      MAIL_API_KEY: ${MAIL_API_KEY:?MAIL_API_KEY requis}
+      MAIL_API_PORT: 9941
+    ports:
+      - "9941:9941"
+    volumes:
+      # Adapter au répertoire hôte qui contient postfix-accounts.cf
+      # (écriture atomique + verrou : monter le répertoire, pas le fichier).
+      - /srv/docker-mailserver/config:/app/12-mail/config
+    read_only: true
+    tmpfs:
+      - /tmp
