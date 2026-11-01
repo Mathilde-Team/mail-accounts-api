@@ -51,7 +51,7 @@ def test_copie_interface_web():
 
 def test_port_et_sante_explicites():
     contenu = dockerfile()
-    assert "EXPOSE 9941" in contenu
+    assert "EXPOSE 9942" in contenu
     assert "HEALTHCHECK" in contenu
     assert "/health" in contenu
 
