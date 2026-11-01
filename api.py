@@ -15,16 +15,17 @@ from typing import Annotated
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 
 from storage import AccountConflict, AccountNotFound, AccountStore, InvalidAccountsFile
+from ui import PAGE_HTML
 
 # Version de l'application : coïncide avec [project] version de pyproject.toml
 # (vérifié par tests/test_version.py, SOCLE.md §1 — une seule source de vérité).
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 Email = Annotated[
     str,
@@ -205,6 +206,16 @@ def create_app(accounts_file: Path | None = None, api_key: str | None = None) ->
     @app.get("/health", tags=["Service"], summary="Verifier le processus API")
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/", include_in_schema=False)
+    def ui_home() -> HTMLResponse:
+        # Interface web (issue #9) : page statique servie par l'API, publique
+        # (aucun secret dedans), toutes les données viennent des routes /accounts
+        # en same-origin avec la clé Bearer saisie par l'opérateur.
+        logger.debug("ui_home : entrée")
+        response = HTMLResponse(PAGE_HTML)
+        logger.debug("ui_home : sortie")
+        return response
 
     router = APIRouter(
         prefix="/accounts",

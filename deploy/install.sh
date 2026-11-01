@@ -20,13 +20,19 @@ if ! systemctl is-active --quiet mail-accounts-api; then
         exit 1
     fi
 fi
+if ! systemctl is-active --quiet mail-accounts-ui; then
+    if [ -n "$(ss -H -ltn 'sport = :9942')" ]; then
+        echo "Port 9942 is already in use; no service has been installed." >&2
+        exit 1
+    fi
+fi
 
 install -d -m 755 "$TARGET"
 install -d -m 700 /etc/mail-accounts-api
 if systemctl is-active --quiet mail-accounts-api; then
     systemctl stop mail-accounts-api
 fi
-for file in api.py storage.py run.py manage_accounts.py requirements.txt; do
+for file in api.py storage.py run.py manage_accounts.py ui.py requirements.txt; do
     install -m 644 "$SOURCE/$file" "$TARGET/$file"
 done
 # Use the system interpreter: a pyenv interpreter under /root is hidden by ProtectHome.
@@ -49,13 +55,21 @@ with os.fdopen(fd, "w") as stream:
     )
 PY
 fi
+# Port de l'interface web (issue #9) : lu après .env par mail-accounts-ui.
+if [ ! -e /etc/mail-accounts-api/ui.env ]; then
+    install -m 600 /dev/null /etc/mail-accounts-api/ui.env
+    printf 'MAIL_API_PORT=9942\n' > /etc/mail-accounts-api/ui.env
+fi
 chown root:root "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 install -m 644 "$SOURCE/deploy/mail-accounts-api.service" /etc/systemd/system/mail-accounts-api.service
+install -m 644 "$SOURCE/deploy/mail-accounts-ui.service" /etc/systemd/system/mail-accounts-ui.service
 systemd-analyze verify /etc/systemd/system/mail-accounts-api.service
+systemd-analyze verify /etc/systemd/system/mail-accounts-ui.service
 systemctl daemon-reload
-systemctl enable mail-accounts-api
+systemctl enable mail-accounts-api mail-accounts-ui
 systemctl restart mail-accounts-api
+systemctl restart mail-accounts-ui
 "$TARGET/.venv/bin/python" - "$ENV_FILE" <<'PY'
 import sys
 import time
@@ -69,17 +83,20 @@ host = config.get("MAIL_API_HOST") or "127.0.0.1"
 host = {"0.0.0.0": "127.0.0.1", "::": "::1"}.get(host, host)
 if ":" in host:
     host = f"[{host}]"
-url = f"http://{host}:{config.get('MAIL_API_PORT') or '9941'}/health"
+ports = [config.get("MAIL_API_PORT") or "9941", "9942"]
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-for attempt in range(30):
-    try:
-        with opener.open(url, timeout=1) as response:
-            if response.status == 200:
-                break
-    except (urllib.error.URLError, TimeoutError):
-        time.sleep(1)
-else:
-    raise SystemExit("API readiness check failed; inspect journalctl -u mail-accounts-api")
+for port in ports:
+    url = f"http://{host}:{port}/health"
+    for attempt in range(30):
+        try:
+            with opener.open(url, timeout=1) as response:
+                if response.status == 200:
+                    break
+        except (urllib.error.URLError, TimeoutError):
+            time.sleep(1)
+    else:
+        raise SystemExit(f"Readiness check failed on port {port}; inspect journalctl")
 PY
 systemctl is-active --quiet mail-accounts-api
-echo "Service started. Credentials remain in /etc/mail-accounts-api/.env (root, 600)."
+systemctl is-active --quiet mail-accounts-ui
+echo "Services started (API 9941, interface web 9942). Credentials remain in /etc/mail-accounts-api/.env (root, 600)."

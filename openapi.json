@@ -3,7 +3,7 @@
   "info": {
     "title": "Mail Accounts API",
     "description": "Gestion docker-mailserver : list, add, adds, modify et delete. Toutes les routes /accounts exigent une cle Bearer. Seuls les mots de passe generes sont renvoyes, une seule fois a la creation. Les hashes ne sont jamais exposes. DELETE ne supprime pas les boites sur disque.",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "paths": {
     "/health": {

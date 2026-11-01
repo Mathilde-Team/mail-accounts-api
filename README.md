@@ -104,6 +104,22 @@ Ce verrou coordonne les instances de **cette API**, pas le script CLI historique
 ne pas executer ce dernier ou un autre editeur en ecriture pendant les mutations
 API. Le fichier ne doit pas etre un lien symbolique.
 
+## Interface web (port 9942)
+
+Issue #9 : interface construite **entierement sur l'API**. La page servie par
+l'application elle-meme (route `/`, publique, sans aucun secret) est statique
+et sans outil de build ; toutes les donnees viennent dynamiquement des routes
+`/accounts` en same-origin (URLs relatives). La cle Bearer est saisie par
+l'operateur et gardee en `sessionStorage` (onglet courant uniquement, jamais
+`localStorage`, jamais dans l'URL). Les mots de passe generes sont affiches une
+seule fois, a la creation.
+
+L'installateur deploye une seconde instance du meme service, dediee a
+l'interface, sur le port **9942** (`deploy/mail-accounts-ui.service`, port fixe
+dans `/etc/mail-accounts-api/ui.env`). L'API reste sur 9941. Le verrou de
+fichier `flock` serialise les ecritures des deux instances sur le meme fichier
+de comptes.
+
 ## Service systemd sur docker45
 
 Installateur fourni (a executer apres copie du depot sur docker45) :
