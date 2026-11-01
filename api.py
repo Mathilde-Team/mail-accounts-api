@@ -24,7 +24,7 @@ from storage import AccountConflict, AccountNotFound, AccountStore, InvalidAccou
 
 # Version de l'application : coïncide avec [project] version de pyproject.toml
 # (vérifié par tests/test_version.py, SOCLE.md §1 — une seule source de vérité).
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 Email = Annotated[
     str,
