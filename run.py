@@ -13,7 +13,7 @@ if __name__ == "__main__":  # pragma: no cover
         "api:create_app",
         factory=True,
         host=os.environ.get("MAIL_API_HOST", "127.0.0.1"),
-        port=int(os.environ.get("MAIL_API_PORT", "9941")),
+        port=int(os.environ.get("MAIL_API_PORT", "9942")),
         access_log=False,
         proxy_headers=False,
     )

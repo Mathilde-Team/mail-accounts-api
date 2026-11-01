@@ -15,9 +15,9 @@ services:
     restart: unless-stopped
     environment:
       MAIL_API_KEY: ${MAIL_API_KEY:?MAIL_API_KEY requis}
-      MAIL_API_PORT: 9941
+      MAIL_API_PORT: 9942
     ports:
-      - "9941:9941"
+      - "9942:9942"
     volumes:
       # Adapter au répertoire hôte qui contient postfix-accounts.cf
       # (écriture atomique + verrou : monter le répertoire, pas le fichier).
