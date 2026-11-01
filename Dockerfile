@@ -30,14 +30,14 @@ COPY ui /app/ui
 # de l'image. MAIL_API_KEY n'a jamais de valeur par défaut : elle est
 # fournie à l'exécution.
 ENV MAIL_API_HOST=0.0.0.0 \
-    MAIL_API_PORT=9941 \
+    MAIL_API_PORT=9942 \
     MAIL_ACCOUNTS_FILE=/app/12-mail/config/postfix-accounts.cf
 
 USER mailapi
 
-EXPOSE 9941
+EXPOSE 9942
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:9941/health', timeout=2).status == 200 else 1)"
+    CMD python -c "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:9942/health', timeout=2).status == 200 else 1)"
 
 CMD ["python", "run.py"]

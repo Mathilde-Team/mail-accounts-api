@@ -39,7 +39,7 @@ provoque une erreur 503, jamais la creation silencieuse d'un fichier vide.
 .venv/bin/python run.py
 ```
 
-Par defaut, sans configuration d'hote, l'ecoute est sur `127.0.0.1:9941`.
+Par defaut, sans configuration d'hote, l'ecoute est sur `127.0.0.1:9942`.
 Le modele `.env.example` active explicitement `0.0.0.0` pour un reseau local.
 Le port occupe provoque un echec visible : aucun autre port n'est choisi
 silencieusement.
@@ -71,10 +71,10 @@ Ne pas journaliser les corps ou en-tetes d'authentification dans un proxy.
 Exemples (cle chargee dans la variable d'environnement du shell) :
 
 ```sh
-curl -H "Authorization: Bearer $MAIL_API_KEY" http://127.0.0.1:9941/accounts
+curl -H "Authorization: Bearer $MAIL_API_KEY" http://127.0.0.1:9942/accounts
 curl -X POST -H "Authorization: Bearer $MAIL_API_KEY" \
   -H 'Content-Type: application/json' \
-  -d '{"email":"user@example.org"}' http://127.0.0.1:9941/accounts
+  -d '{"email":"user@example.org"}' http://127.0.0.1:9942/accounts
 ```
 
 Codes : 201 creation, 204 suppression, 401 authentification, 404 compte absent,
@@ -107,7 +107,7 @@ API. Le fichier ne doit pas etre un lien symbolique.
 ## Interface web (issue #9)
 
 Une interface légère est servie par l'API elle-même sur `/ui` (page unique,
-sans outil de build ni dépendance externe) : `http://127.0.0.1:9941/ui`.
+sans outil de build ni dépendance externe) : `http://127.0.0.1:9942/ui`.
 Elle est entièrement dynamique — lister, filtrer, créer (compte seul, lot
 libre, lot numéroté), changer un mot de passe, supprimer — et appelle
 exactement les routes `/accounts` documentées ci-dessus, avec la clé Bearer
@@ -129,7 +129,7 @@ docker build -t mail-accounts-api:local .
 
 # Exécution : la clé est passée par l'environnement, jamais dans l'URL ou le fichier.
 MAIL_API_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')" \
-  docker run --rm -p 9941:9941 \
+  docker run --rm -p 9942:9942 \
   -e MAIL_API_KEY \
   -v /srv/docker-mailserver/config:/app/12-mail/config \
   mail-accounts-api:local
@@ -148,7 +148,7 @@ cp deploy/docker-compose.example.yml docker-compose.yml
 MAIL_API_KEY=... docker compose up -d
 ```
 
-Comme pour le service systemd, l'API écoute sur `0.0.0.0:9941` dans le
+Comme pour le service systemd, l'API écoute sur `0.0.0.0:9942` dans le
 conteneur : ne l'exposez pas sur Internet, limitez par pare-feu et passez
 par HTTPS (proxy ou tunnel).
 
@@ -191,7 +191,7 @@ mail, privileges et familles de sockets restreints, aucun acces au socket Docker
 Le montage `/app` doit etre disponible avant le demarrage.
 Apres modification du `.env` : `systemctl restart mail-accounts-api`.
 
-Le port vise est **9941/TCP**. Ne pas l'exposer sur Internet. Limiter par pare-feu
+Le port vise est **9942/TCP**. Ne pas l'exposer sur Internet. Limiter par pare-feu
 aux clients autorises et utiliser HTTPS via un proxy ou un tunnel SSH : HTTP
 seul ne chiffre ni la cle ni les mots de passe, meme sur un LAN.
 L'API ne redemarre et ne redeploie pas Docker. La prise en compte depend du

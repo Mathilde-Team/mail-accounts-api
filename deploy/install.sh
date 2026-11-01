@@ -15,8 +15,8 @@ if [ ! -f /app/12-mail/config/postfix-accounts.cf ] || [ -L /app/12-mail/config/
     exit 1
 fi
 if ! systemctl is-active --quiet mail-accounts-api; then
-    if [ -n "$(ss -H -ltn 'sport = :9941')" ]; then
-        echo "Port 9941 is already in use; no service has been installed." >&2
+    if [ -n "$(ss -H -ltn 'sport = :9942')" ]; then
+        echo "Port 9942 is already in use; no service has been installed." >&2
         exit 1
     fi
 fi
@@ -45,7 +45,7 @@ with os.fdopen(fd, "w") as stream:
         f"MAIL_API_KEY={secrets.token_urlsafe(48)}\n"
         "MAIL_ACCOUNTS_FILE=/app/12-mail/config/postfix-accounts.cf\n"
         "MAIL_API_HOST=0.0.0.0\n"
-        "MAIL_API_PORT=9941\n"
+        "MAIL_API_PORT=9942\n"
     )
 PY
 fi
@@ -69,7 +69,7 @@ host = config.get("MAIL_API_HOST") or "127.0.0.1"
 host = {"0.0.0.0": "127.0.0.1", "::": "::1"}.get(host, host)
 if ":" in host:
     host = f"[{host}]"
-url = f"http://{host}:{config.get('MAIL_API_PORT') or '9941'}/health"
+url = f"http://{host}:{config.get('MAIL_API_PORT') or '9942'}/health"
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 for attempt in range(30):
     try:
