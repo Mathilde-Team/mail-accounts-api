@@ -22,7 +22,9 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Code applicatif uniquement : ni .env (secret), ni tests, ni CI.
-COPY api.py storage.py manage_accounts.py run.py /app/
+COPY api.py storage.py manage_accounts.py run.py webui.py /app/
+# Interface web (issue #9) : page et ressources statiques.
+COPY ui /app/ui
 
 # Le fichier des comptes est monté par l'opérateur ; il doit rester absent
 # de l'image. MAIL_API_KEY n'a jamais de valeur par défaut : elle est

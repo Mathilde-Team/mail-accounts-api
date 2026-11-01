@@ -15,14 +15,6 @@ HEADERS = {"Authorization": f"Bearer {KEY}"}
 
 
 @pytest.fixture
-def accounts_file(tmp_path):
-    path = tmp_path / "postfix-accounts.cf"
-    path.write_text("# existing comment\nold@example.org|{sha512}old|old|extra\n\n")
-    path.chmod(0o640)
-    return path
-
-
-@pytest.fixture
 def client(accounts_file):
     with TestClient(create_app(accounts_file, KEY)) as test_client:
         yield test_client

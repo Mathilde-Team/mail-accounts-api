@@ -21,10 +21,11 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 
 from storage import AccountConflict, AccountNotFound, AccountStore, InvalidAccountsFile
+from webui import creer_routeur_ui
 
 # Version de l'application : coïncide avec [project] version de pyproject.toml
 # (vérifié par tests/test_version.py, SOCLE.md §1 — une seule source de vérité).
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 Email = Annotated[
     str,
@@ -317,5 +318,7 @@ def create_app(accounts_file: Path | None = None, api_key: str | None = None) ->
         return Response(status_code=204)
 
     app.include_router(router)
+    # Interface web (issue #9) : page statique sans secret, données via /accounts.
+    app.include_router(creer_routeur_ui())
     logger.debug("create_app : sortie (application configurée)")
     return app

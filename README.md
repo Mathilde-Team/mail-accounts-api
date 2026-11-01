@@ -104,6 +104,18 @@ Ce verrou coordonne les instances de **cette API**, pas le script CLI historique
 ne pas executer ce dernier ou un autre editeur en ecriture pendant les mutations
 API. Le fichier ne doit pas etre un lien symbolique.
 
+## Interface web (issue #9)
+
+Une interface légère est servie par l'API elle-même sur `/ui` (page unique,
+sans outil de build ni dépendance externe) : `http://127.0.0.1:9941/ui`.
+Elle est entièrement dynamique — lister, filtrer, créer (compte seul, lot
+libre, lot numéroté), changer un mot de passe, supprimer — et appelle
+exactement les routes `/accounts` documentées ci-dessus, avec la clé Bearer
+saisie par l'opérateur. La clé reste en `sessionStorage` (jamais dans un
+cookie ni dans l'URL) : fermer l'onglet la fait disparaître. Les mots de
+passe générés sont affichés une seule fois, comme dans les réponses de
+l'API. L'interface n'exige pas d'authentification pour être servie : elle
+ne contient ni secret ni donnée, tout affichage exige la clé.
 ## Containerisation Docker (issue #10)
 
 L'image de production est décrite par le `Dockerfile` : base `python:3.12.8-slim-bookworm`

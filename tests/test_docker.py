@@ -41,6 +41,14 @@ def test_aucun_secret_embarque():
     assert "COPY .env" not in contenu
 
 
+def test_copie_interface_web():
+    contenu = dockerfile()
+    # L'interface (issue #9) est servie par l'application : elle fait
+    # partie de l'image, les tests et la CI n'en font pas partie.
+    assert "COPY ui /app/ui" in contenu
+    assert "webui.py" in contenu
+
+
 def test_port_et_sante_explicites():
     contenu = dockerfile()
     assert "EXPOSE 9941" in contenu
