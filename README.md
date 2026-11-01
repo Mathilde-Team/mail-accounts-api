@@ -116,6 +116,41 @@ cookie ni dans l'URL) : fermer l'onglet la fait disparaître. Les mots de
 passe générés sont affichés une seule fois, comme dans les réponses de
 l'API. L'interface n'exige pas d'authentification pour être servie : elle
 ne contient ni secret ni donnée, tout affichage exige la clé.
+## Containerisation Docker (issue #10)
+
+L'image de production est décrite par le `Dockerfile` : base `python:3.12.8-slim-bookworm`
+figée, utilisateur non privilégié `mailapi` (uid/gid 9000), aucun secret embarqué
+(la clé est fournie à l'exécution), système de fichiers applicatif en
+lecture seule : seule la zone des comptes est montée en écriture.
+
+```sh
+# Construction locale de l'image.
+docker build -t mail-accounts-api:local .
+
+# Exécution : la clé est passée par l'environnement, jamais dans l'URL ou le fichier.
+MAIL_API_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')" \
+  docker run --rm -p 9941:9941 \
+  -e MAIL_API_KEY \
+  -v /srv/docker-mailserver/config:/app/12-mail/config \
+  mail-accounts-api:local
+```
+
+Le répertoire des comptes docker-mailserver est monté **en entier** : les
+écritures sont atomiques (fichier temporaire + `os.replace`) et créent un
+fichier de verrou à côté du fichier des comptes, le répertoire doit donc
+être accessible en écriture à l'utilisateur du conteneur (uid 9000). Ne
+montez pas le seul fichier `postfix-accounts.cf`. Un exemple complet
+(read-only, tmpfs, restart policy) est fourni dans
+[deploy/docker-compose.example.yml](./deploy/docker-compose.example.yml) :
+
+```sh
+cp deploy/docker-compose.example.yml docker-compose.yml
+MAIL_API_KEY=... docker compose up -d
+```
+
+Comme pour le service systemd, l'API écoute sur `0.0.0.0:9941` dans le
+conteneur : ne l'exposez pas sur Internet, limitez par pare-feu et passez
+par HTTPS (proxy ou tunnel).
 
 ## Service systemd sur docker45
 

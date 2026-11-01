@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Le .env contient la clé d'API : jamais dans le contexte de build.
+.env
+.git
+.github
+.venv
+__pycache__
+*.pyc
+tests
+scripts
+deploy
+docs
+Makefile
+pyproject.toml
+uv.lock
+requirements-dev.txt
+openapi.json
+README.md
+LICENSE
+.yamllint.yaml
