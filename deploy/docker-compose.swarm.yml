@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Image déjà construite et publiée ; aucun build avec docker stack deploy.
+version: "3.8"
+services:
+  mail-accounts-api:
+    image: ${MAIL_API_IMAGE:?MAIL_API_IMAGE requis}
+    environment:
+      MAIL_API_KEY: ${MAIL_API_KEY:?MAIL_API_KEY requis}
+      MAIL_API_PORT: "9942"
+    ports:
+      - target: 9942
+        published: 9942
+        protocol: tcp
+        mode: host
+    volumes:
+      - type: bind
+        source: ${MAIL_CONFIG_DIR:?MAIL_CONFIG_DIR requis}
+        target: /app/12-mail/config
+      - type: tmpfs
+        target: /tmp
+    read_only: true
+    cap_drop:
+      - ALL
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.mail-accounts-data == true
+      restart_policy:
+        condition: any
+        delay: 5s
+      update_config:
+        parallelism: 1
+        order: stop-first
+        failure_action: rollback
+      rollback_config:
+        parallelism: 1
+        order: stop-first

@@ -144,13 +144,93 @@ montez pas le seul fichier `postfix-accounts.cf`. Un exemple complet
 [deploy/docker-compose.example.yml](./deploy/docker-compose.example.yml) :
 
 ```sh
-cp deploy/docker-compose.example.yml docker-compose.yml
-MAIL_API_KEY=... docker compose up -d
+export MAIL_CONFIG_DIR=/srv/docker-mailserver/config
+# Charger MAIL_API_KEY depuis un environnement protégé, sans l'afficher.
+docker compose up -d --build
 ```
 
 Comme pour le service systemd, l'API écoute sur `0.0.0.0:9942` dans le
 conteneur : ne l'exposez pas sur Internet, limitez par pare-feu et passez
 par HTTPS (proxy ou tunnel).
+
+### Compose standard
+
+Le fichier [docker-compose.yml](./docker-compose.yml), à la racine, construit
+l'image depuis ce dépôt et publie uniquement `127.0.0.1:9942`. Le répertoire
+absolu `MAIL_CONFIG_DIR` doit déjà exister et contenir `postfix-accounts.cf` :
+Compose refuse de le créer silencieusement. L'uid/gid 9000 doit pouvoir
+traverser et écrire dans ce répertoire, lire le fichier et préserver ses
+permissions/propriétaire lors du remplacement atomique. Adapter les droits
+avec l'administrateur de docker-mailserver ; ne pas utiliser `chmod 777`.
+
+Définir `MAIL_API_KEY` (au moins 32 caractères ASCII sans espace) dans un
+environnement protégé, ou dans un `.env` local non versionné avec droits 0600.
+Ne pas copier les comptes ni la clé dans l'image. L'interface se trouve sur
+`http://127.0.0.1:9942/ui` ; le contrôle `/health` confirme le processus,
+pas l'accès au stockage. Vérifier aussi `/accounts` avec une clé valide.
+
+```sh
+docker compose up -d --build
+docker compose ps
+curl --fail http://127.0.0.1:9942/health
+# Mise à jour depuis une nouvelle révision du dépôt :
+docker compose up -d --build
+# Arrêt (ne supprime pas les comptes montés depuis l'hôte) :
+docker compose down
+```
+
+Le système applicatif est en lecture seule, `/tmp` en mémoire, toutes les
+capacités Linux sont retirées et Compose applique `no-new-privileges`.
+L'ancien fichier `deploy/docker-compose.example.yml` reste un exemple
+historique ; préférer le fichier de la racine pour les nouveaux déploiements.
+
+### Docker Swarm
+
+[deploy/docker-compose.swarm.yml](./deploy/docker-compose.swarm.yml) est une
+variante autonome pour `docker stack deploy`, sans `build`, ni `env_file`, ni
+options Compose ignorées par Swarm. Préparer un Swarm existant et un registre
+accessible aux nœuds ; construire puis publier une image avec un tag de
+version immuable, idéalement référencée par digest. Ne jamais déployer
+`mail-accounts-api:local` sans avoir distribué l'image.
+
+Étiqueter exactement un nœud, celui qui possède le répertoire de comptes
+docker-mailserver et ses droits uid/gid 9000. Le service reste contraint à
+ce nœud avec une seule réplique : aucune réplication des comptes entre nœuds
+n'est fournie. Si le nœud est indisponible, le service attend ; il ne doit
+pas démarrer avec un autre fichier vide. Ne pas utiliser NFS ni mettre
+plusieurs répliques en écriture sur des copies différentes des comptes.
+
+```sh
+# Opérations à effectuer par l'administrateur sur son infrastructure :
+docker node update --label-add mail-accounts-data=true NOM_DU_NOEUD
+export MAIL_CONFIG_DIR=/srv/docker-mailserver/config
+export MAIL_API_IMAGE=registre.example.org/mail-accounts-api:1.2.0
+docker build -t "$MAIL_API_IMAGE" .
+docker push "$MAIL_API_IMAGE"
+# Exporter MAIL_API_KEY depuis un environnement protégé avant cette commande.
+# docker stack ne charge pas automatiquement le .env utilisé par Compose.
+docker stack deploy --with-registry-auth -c deploy/docker-compose.swarm.yml mail
+docker stack services mail
+docker service ps mail_mail-accounts-api
+# Mise à jour : changer MAIL_API_IMAGE puis relancer docker stack deploy.
+# Retour à la spécification précédente (pas une restauration des comptes) :
+docker service rollback mail_mail-accounts-api
+```
+
+Les mises à jour et retours arrière sont `stop-first`, une tâche à la fois,
+pour éviter deux écrivains et une collision sur le port : une courte coupure
+est normale. Le port 9942 est publié en mode `host` uniquement sur le nœud
+de la tâche, mais sur toutes ses interfaces, contrairement au Compose
+standard. Le filtrer avant le démarrage, réserver l'accès au réseau
+d'administration ou à un proxy HTTPS, jamais à Internet.
+
+La clé passée par environnement figure dans la spécification du service :
+limiter strictement les accès administrateur au Swarm et à Docker. Cette
+variante n'annonce pas de prise en charge de `MAIL_API_KEY_FILE` ou de secrets
+Swarm, que l'application ne lit pas. Ne pas partager les sorties de
+`docker compose config`, `docker stack config` ou `docker service inspect`,
+qui peuvent contenir la clé. Les tests automatisés vérifient les structures
+YAML et les invariants ; aucun déploiement réel n'est réalisé par la CI.
 
 ## Service systemd sur docker45
 
