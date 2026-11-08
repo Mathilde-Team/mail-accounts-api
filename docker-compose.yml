@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Depuis la racine : docker compose up -d --build
+services:
+  mail-accounts-api:
+    build: .
+    image: ${MAIL_API_IMAGE:-mail-accounts-api:local}
+    restart: unless-stopped
+    environment:
+      MAIL_API_KEY: ${MAIL_API_KEY:?MAIL_API_KEY requis}
+      MAIL_API_PORT: "9942"
+    ports:
+      - "127.0.0.1:9942:9942"
+    volumes:
+      - type: bind
+        source: ${MAIL_CONFIG_DIR:?MAIL_CONFIG_DIR requis}
+        target: /app/12-mail/config
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
